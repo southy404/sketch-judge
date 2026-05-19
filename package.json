@@ -1,0 +1,32 @@
+{
+  "name": "sketch-judge-mobile-ollama-v2",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"vite --host 127.0.0.1\" \"tsx server/index.ts\"",
+    "dev:phone": "concurrently \"vite --host 0.0.0.0\" \"tsx server/index.ts\"",
+    "dev:web": "vite --host 127.0.0.1",
+    "dev:api": "tsx server/index.ts",
+    "build": "tsc && vite build",
+    "preview": "vite preview --host 127.0.0.1"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "latest",
+    "vite": "latest",
+    "typescript": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "lucide-react": "latest",
+    "express": "latest",
+    "cors": "latest",
+    "tsx": "latest",
+    "concurrently": "latest"
+  },
+  "devDependencies": {
+    "@types/express": "latest",
+    "@types/cors": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest"
+  }
+}

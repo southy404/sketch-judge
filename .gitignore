@@ -1,0 +1,58 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+.yarn/
+.yarn-cache/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build output
+dist/
+build/
+.vite/
+.next/
+out/
+coverage/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Keep examples
+!.env.example
+!.env.local.example
+!.env.development.example
+!.env.production.example
+
+# Runtime / local data
+*.log
+logs/
+tmp/
+temp/
+.cache/
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.example.json
+.idea/
+
+# TypeScript
+*.tsbuildinfo
+
+# Testing
+playwright-report/
+test-results/
+
+# Mobile / Capacitor later
+android/.gradle/
+android/app/build/
+ios/Pods/
+ios/App/build/
