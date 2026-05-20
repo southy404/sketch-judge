@@ -1,4 +1,4 @@
-import { createMotifResponse } from "../server/apiHandlers";
+import { createMotifResponse } from "../server/apiHandlers.js";
 
 type ApiRequest = {
   method?: string;

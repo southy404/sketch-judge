@@ -1,4 +1,4 @@
-import { createJudgeResponse } from "../server/apiHandlers";
+import { createJudgeResponse } from "../server/apiHandlers.js";
 
 type ApiRequest = {
   method?: string;
