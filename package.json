@@ -13,20 +13,22 @@
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
-    "vite": "latest",
-    "typescript": "latest",
+    "concurrently": "latest",
+    "cors": "latest",
+    "express": "latest",
+    "lucide-react": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "lucide-react": "latest",
-    "express": "latest",
-    "cors": "latest",
     "tsx": "latest",
-    "concurrently": "latest"
+    "typescript": "latest",
+    "vite": "latest"
   },
   "devDependencies": {
-    "@types/express": "latest",
     "@types/cors": "latest",
+    "@types/express": "latest",
+    "@types/node": "^25.9.1",
     "@types/react": "latest",
-    "@types/react-dom": "latest"
+    "@types/react-dom": "latest",
+    "@vercel/node": "^5.8.3"
   }
 }

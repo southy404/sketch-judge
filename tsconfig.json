@@ -1,7 +1,8 @@
 {
   "compilerOptions": {
-    "target": "ES2021",
+    "target": "ES2022",
     "useDefineForClassFields": true,
+    "types": ["node", "vite/client"],
     "lib": ["DOM", "DOM.Iterable", "ES2021"],
     "allowJs": false,
     "skipLibCheck": true,
