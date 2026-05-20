@@ -3,12 +3,14 @@ import { createOllamaProvider } from "./ollamaProvider";
 import { createOpenRouterProvider } from "./openRouterProvider";
 import type { AiProvider, AiProviderName } from "./types";
 
-let warnedMissingOpenRouterKey = false;
+export class AiConfigurationError extends Error {
+  provider: AiProviderName;
 
-function warnMissingOpenRouterKey() {
-  if (warnedMissingOpenRouterKey) return;
-  warnedMissingOpenRouterKey = true;
-  console.warn("[ai] AI_PROVIDER=openrouter but OPENROUTER_API_KEY is missing; falling back to Ollama.");
+  constructor(provider: AiProviderName, message: string) {
+    super(message);
+    this.name = "AiConfigurationError";
+    this.provider = provider;
+  }
 }
 
 export function createAiProvider(name: AiProviderName, config: AiConfig): AiProvider | null {
@@ -33,7 +35,10 @@ export function selectPrimaryAiProvider(config: AiConfig = getAiConfig()): {
   }
 
   if (requestedProvider === "openrouter") {
-    warnMissingOpenRouterKey();
+    throw new AiConfigurationError(
+      "openrouter",
+      "AI_PROVIDER=openrouter but OPENROUTER_API_KEY is missing. Set OPENROUTER_API_KEY on the server."
+    );
   }
 
   return {

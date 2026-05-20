@@ -100,8 +100,8 @@ export function createOpenRouterProvider(config: OpenRouterProviderConfig): AiPr
       }
 
       const headers: Record<string, string> = {
-        "content-type": "application/json",
-        authorization: `Bearer ${config.apiKey}`,
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${config.apiKey}`,
       };
       if (config.siteUrl) headers["HTTP-Referer"] = config.siteUrl;
       if (config.appName) headers["X-Title"] = config.appName;

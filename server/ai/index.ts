@@ -1,8 +1,9 @@
 import { getAiConfig } from "./config";
-import { createAiProvider, selectPrimaryAiProvider } from "./provider";
+import { AiConfigurationError, createAiProvider, selectPrimaryAiProvider } from "./provider";
 import type { AiGenerateOptions, AiGenerateResult, AiMessage, AiProvider } from "./types";
 
 export { getAiConfig } from "./config";
+export { AiConfigurationError } from "./provider";
 export type {
   AiGenerateOptions,
   AiGenerateResult,

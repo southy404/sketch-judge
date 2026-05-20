@@ -35,6 +35,11 @@ function stripTrailingSlash(value: string): string {
   return value.replace(/\/+$/, "");
 }
 
+function defaultProvider(): AiProviderName {
+  if (process.env.VERCEL || process.env.VERCEL_ENV) return "openrouter";
+  return "ollama";
+}
+
 export function getAiConfig(): AiConfig {
   const openRouterApiKey = readEnv("OPENROUTER_API_KEY");
   const ollamaBaseUrl =
@@ -45,7 +50,7 @@ export function getAiConfig(): AiConfig {
   return {
     primaryProvider: normalizeProviderName(
       process.env.AI_PROVIDER,
-      "openrouter"
+      defaultProvider()
     ),
     fallbackProvider: normalizeProviderName(
       process.env.AI_FALLBACK_PROVIDER,
@@ -58,11 +63,12 @@ export function getAiConfig(): AiConfig {
     openRouter: {
       apiKey: openRouterApiKey,
       configured: openRouterApiKey.length > 0,
-      model: readEnv("OPENROUTER_MODEL") || "google/gemma-4-e4b",
+      model: readEnv("OPENROUTER_MODEL") || "google/gemma-4-26b-a4b-it",
       baseUrl: stripTrailingSlash(
         readEnv("OPENROUTER_BASE_URL") || "https://openrouter.ai/api/v1"
       ),
-      siteUrl: readEnv("OPENROUTER_SITE_URL") || "http://localhost:5173",
+      siteUrl:
+        readEnv("OPENROUTER_SITE_URL") || "https://sketch-judge.vercel.app",
       appName: readEnv("OPENROUTER_APP_NAME") || "Sketch Judge",
     },
   };

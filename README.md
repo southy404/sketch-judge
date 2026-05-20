@@ -209,9 +209,9 @@ Preview the production build locally.
 
 ## AI Providers
 
-Sketch Judge defaults to local Ollama and can use OpenRouter from the backend when configured. API keys stay server-side in `.env`; the frontend never receives `OPENROUTER_API_KEY`.
+Sketch Judge calls its own backend with relative URLs like `/api/motif` and `/api/judge`. The browser never calls OpenRouter directly and never receives `OPENROUTER_API_KEY`.
 
-Default local mode:
+Local Ollama mode:
 
 ```bash
 AI_PROVIDER=ollama
@@ -219,16 +219,15 @@ OLLAMA_BASE_URL=http://127.0.0.1:11434
 OLLAMA_MODEL=gemma4:e4b
 ```
 
-OpenRouter mode:
+Vercel/OpenRouter mode:
 
 ```bash
 AI_PROVIDER=openrouter
-AI_FALLBACK_PROVIDER=ollama
 OPENROUTER_API_KEY=your-openrouter-key
-OPENROUTER_MODEL=google/gemma-4-e4b
+OPENROUTER_MODEL=google/gemma-3-4b-it
 ```
 
-If OpenRouter is selected without a key, or an OpenRouter request fails while `AI_FALLBACK_PROVIDER=ollama`, the API falls back to Ollama. If Ollama is unavailable too, the existing deterministic motif and score fallback logic is used.
+On local development, the default provider is Ollama. On Vercel, the default provider is OpenRouter. If OpenRouter is selected but `OPENROUTER_API_KEY` is missing, the API returns a clear JSON configuration error instead of exposing a secret or failing with a vague 404/500. If an OpenRouter request fails after configuration is present, Sketch Judge falls back to the existing deterministic motif and judge scoring logic where possible.
 
 ---
 
@@ -244,9 +243,9 @@ OLLAMA_BASE_URL=http://127.0.0.1:11434
 OLLAMA_MODEL=gemma4:e4b
 
 OPENROUTER_API_KEY=
-OPENROUTER_MODEL=google/gemma-4-e4b
+OPENROUTER_MODEL=google/gemma-3-4b-it
 OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
-OPENROUTER_SITE_URL=http://localhost:5173
+OPENROUTER_SITE_URL=https://sketch-judge.vercel.app
 OPENROUTER_APP_NAME=Sketch Judge
 
 PORT=8789
@@ -265,9 +264,14 @@ This is the practical structure, reduced to the important parts:
 │   ├── sketch-judge-logo.svg
 │   └── mockup.png
 │
+├── api/
+│   ├── motif.ts              # Vercel POST /api/motif
+│   └── judge.ts              # Vercel POST /api/judge
+│
 ├── server/
 │   ├── ai/                   # Provider config, OpenRouter, Ollama abstraction
-│   ├── index.ts              # Express API, motif + judge routes
+│   ├── apiHandlers.ts        # Shared motif + judge logic
+│   ├── index.ts              # Local Express API wrapper
 │   ├── motifs.ts             # Casual/artist motif pools and fallback picking
 │   ├── motifValidation.ts    # Motif safety, boring/recent checks
 │   └── judgeScoring.ts       # Score guards, artist mode caps, self-tests
@@ -297,13 +301,17 @@ This is the practical structure, reduced to the important parts:
 
 ## Deployment Notes
 
-The prototype is designed for local Ollama first.
+The app includes Vercel API routes at `/api/motif` and `/api/judge`, so a Vercel deployment no longer depends on the local Express server. Vercel should use OpenRouter because serverless functions cannot access your local Ollama instance.
 
-A hosted frontend can be deployed, but a serverless backend cannot access the user's local Ollama instance. If the game is hosted publicly, use one of these approaches:
+In Vercel Project Settings > Environment Variables, set:
 
-1. browser-to-local-Ollama mode,
-2. a small local bridge,
-3. or a cloud/demo AI fallback.
+```txt
+AI_PROVIDER=openrouter
+OPENROUTER_API_KEY=your-openrouter-key
+OPENROUTER_MODEL=google/gemma-3-4b-it
+```
+
+After changing Vercel environment variables, redeploy the project so the serverless functions receive the new values.
 
 ---
 
