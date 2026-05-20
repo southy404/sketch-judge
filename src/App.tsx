@@ -22,6 +22,7 @@ import {
 } from "./storage";
 import type { GameHistoryEntry, Profile } from "./storage";
 import { getNextActionLabel, getWinners } from "./gameLogic";
+import { setThemeColor } from "./themeColor";
 
 const REVEAL_SECONDS = 5;
 const MAX_PLAYERS = 4;
@@ -84,6 +85,26 @@ function bgClassFor(tab: AppTab, phase: Phase): string {
       return "bg-yellow";
     case "finished":
       return "bg-pink";
+  }
+}
+
+function themeColorFor(tab: AppTab, phase: Phase): string {
+  if (tab === "home") return "#d9f5e7";
+  if (tab === "history") return "#fff7e6";
+  if (tab === "rank") return "#d9eaf8";
+  if (tab === "profile") return "#ffe1e2";
+  switch (phase) {
+    case "settings":
+    case "generating":
+    case "reveal":
+      return "#d9eaf8";
+    case "drawing":
+      return "#fff7e6";
+    case "judging":
+    case "leaderboard":
+      return "#fff4c9";
+    case "finished":
+      return "#ffe1e2";
   }
 }
 
@@ -411,6 +432,10 @@ export function App() {
 
   const bgClass = bgClassFor(tab, phase);
   const navVisible = isNavVisible(tab);
+
+  useEffect(() => {
+    setThemeColor(themeColorFor(tab, phase));
+  }, [tab, phase]);
 
   return (
     <main className={`app ${bgClass}${navVisible ? " has-nav" : ""}`}>
