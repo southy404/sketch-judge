@@ -21,7 +21,10 @@ function readEnv(name: string): string {
   return (process.env[name] || "").trim();
 }
 
-function normalizeProviderName(value: string | undefined, fallback: AiProviderName): AiProviderName {
+function normalizeProviderName(
+  value: string | undefined,
+  fallback: AiProviderName
+): AiProviderName {
   const normalized = (value || "").trim().toLowerCase();
   if (normalized === "openrouter") return "openrouter";
   if (normalized === "ollama") return "ollama";
@@ -34,11 +37,20 @@ function stripTrailingSlash(value: string): string {
 
 export function getAiConfig(): AiConfig {
   const openRouterApiKey = readEnv("OPENROUTER_API_KEY");
-  const ollamaBaseUrl = readEnv("OLLAMA_BASE_URL") || readEnv("OLLAMA_URL") || "http://127.0.0.1:11434";
+  const ollamaBaseUrl =
+    readEnv("OLLAMA_BASE_URL") ||
+    readEnv("OLLAMA_URL") ||
+    "http://127.0.0.1:11434";
 
   return {
-    primaryProvider: normalizeProviderName(process.env.AI_PROVIDER, "ollama"),
-    fallbackProvider: normalizeProviderName(process.env.AI_FALLBACK_PROVIDER, "ollama"),
+    primaryProvider: normalizeProviderName(
+      process.env.AI_PROVIDER,
+      "openrouter"
+    ),
+    fallbackProvider: normalizeProviderName(
+      process.env.AI_FALLBACK_PROVIDER,
+      "ollama"
+    ),
     ollama: {
       baseUrl: stripTrailingSlash(ollamaBaseUrl),
       model: readEnv("OLLAMA_MODEL") || "gemma4:e4b",
@@ -47,7 +59,9 @@ export function getAiConfig(): AiConfig {
       apiKey: openRouterApiKey,
       configured: openRouterApiKey.length > 0,
       model: readEnv("OPENROUTER_MODEL") || "google/gemma-4-e4b",
-      baseUrl: stripTrailingSlash(readEnv("OPENROUTER_BASE_URL") || "https://openrouter.ai/api/v1"),
+      baseUrl: stripTrailingSlash(
+        readEnv("OPENROUTER_BASE_URL") || "https://openrouter.ai/api/v1"
+      ),
       siteUrl: readEnv("OPENROUTER_SITE_URL") || "http://localhost:5173",
       appName: readEnv("OPENROUTER_APP_NAME") || "Sketch Judge",
     },

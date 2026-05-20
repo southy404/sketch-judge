@@ -75,24 +75,26 @@ export function DrawingScreen(props: Props) {
         </span>
       </div>
 
-      <div className="draw-title">
-        <span className="draw-label">draw:</span>
-        <span className="motif-word prompt-motif">
-          {props.motif}
-          <SvgUnderline className="small-underline prompt-underline" />
-        </span>
-      </div>
+      <div className="canvas-column">
+        <div className="draw-title">
+          <span className="draw-label">draw:</span>
+          <span className="motif-word prompt-motif">
+            {props.motif}
+            <SvgUnderline className="small-underline prompt-underline" />
+          </span>
+        </div>
 
-      <div className="drawing-stage">
-        <CanvasDrawing
-          ref={canvasRef}
-          tool={tool}
-          color={color}
-          size={size}
-          shapeFill={shapeFill}
-          onActionCountChange={setActionCount}
-          onCanUndoChange={setCanUndo}
-        />
+        <div className="drawing-stage">
+          <CanvasDrawing
+            ref={canvasRef}
+            tool={tool}
+            color={color}
+            size={size}
+            shapeFill={shapeFill}
+            onActionCountChange={setActionCount}
+            onCanUndoChange={setCanUndo}
+          />
+        </div>
       </div>
 
       <div className="drawing-toolbar">
@@ -154,31 +156,33 @@ export function DrawingScreen(props: Props) {
           )}
         </div>
 
-        <div className="size-row">
-          <button
-            type="button"
-            className="size-step"
-            onClick={() => setSize(Math.max(3, size - 3))}
-            aria-label="smaller brush"
-          >
-            <Minus size={16} />
-          </button>
-          <input
-            type="range"
-            min={3}
-            max={30}
-            value={size}
-            onChange={(e) => setSize(Number(e.target.value))}
-            aria-label="brush size"
-          />
-          <button
-            type="button"
-            className="size-step"
-            onClick={() => setSize(Math.min(30, size + 3))}
-            aria-label="bigger brush"
-          >
-            <Plus size={16} />
-          </button>
+        <div className="size-row" role="group" aria-label="brush size controls">
+          <div className="stroke-control">
+            <button
+              type="button"
+              className="size-step"
+              onClick={() => setSize(Math.max(3, size - 3))}
+              aria-label="smaller brush"
+            >
+              <Minus size={16} />
+            </button>
+            <input
+              type="range"
+              min={3}
+              max={30}
+              value={size}
+              onChange={(e) => setSize(Number(e.target.value))}
+              aria-label="brush size"
+            />
+            <button
+              type="button"
+              className="size-step"
+              onClick={() => setSize(Math.min(30, size + 3))}
+              aria-label="bigger brush"
+            >
+              <Plus size={16} />
+            </button>
+          </div>
           <span className="size-preview" aria-hidden>
             <span style={{ width: size, height: size, background: color }} />
           </span>

@@ -693,22 +693,22 @@ input {
 
 /* ============ drawing ============ */
 .drawing {
-  grid-template-rows: auto auto 1fr auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 10px;
   padding-bottom: calc(14px + env(safe-area-inset-bottom));
 }
 
 .drawing-top {
-  position: relative;
-  display: grid;
-  justify-items: center;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
   min-height: 38px;
 }
 
 .drawing-top .timer-pill {
-  position: absolute;
-  right: 0;
-  top: -2px;
+  margin-left: auto;
+  flex: none;
 }
 
 .timer-pill {
@@ -727,6 +727,7 @@ input {
 }
 
 .draw-title {
+  width: 100%;
   text-align: center;
   font-family: Gaegu, cursive;
   font-size: 26px;
@@ -749,8 +750,18 @@ input {
 .drawing-stage {
   display: grid;
   min-height: 0;
+  width: 100%;
   align-items: center;
   justify-items: center;
+}
+
+.canvas-column {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  justify-items: center;
+  gap: 10px;
+  min-height: 0;
+  width: 100%;
 }
 
 .canvas-stack {
@@ -796,12 +807,18 @@ input {
   display: none;
 }
 
-.size-row,
 .action-row {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+}
+
+.size-row {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  width: 100%;
 }
 
 .tool-btn {
@@ -878,20 +895,30 @@ input {
   transform: scale(1.08);
 }
 
-.size-row input[type="range"] {
-  flex: 1;
-  max-width: 200px;
+.stroke-control {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 200px) 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.stroke-control input[type="range"] {
+  width: 100%;
+  min-width: 0;
   accent-color: var(--coral);
 }
 
 .size-step {
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background: #fff;
   border: 1.5px solid var(--ink);
   display: grid;
   place-items: center;
+  line-height: 1;
 }
 
 .size-preview {
@@ -2066,18 +2093,16 @@ input {
      stack aspect-ratio 1/1 and let it grow as the column allows. */
   .drawing {
     grid-template-columns: minmax(0, 1fr) 260px;
-    grid-template-rows: auto auto 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
     grid-template-areas:
       "top    top"
-      "title  title"
-      "stage  toolbar";
+      "canvas toolbar";
     column-gap: 28px;
     row-gap: 12px;
   }
   .drawing > .screen-top { grid-area: top; }
-  .drawing > .draw-title { grid-area: title; }
-  .drawing > .drawing-stage {
-    grid-area: stage;
+  .drawing > .canvas-column {
+    grid-area: canvas;
     min-height: 0;
   }
   .drawing > .drawing-toolbar {
@@ -2110,12 +2135,9 @@ input {
     grid-template-columns: repeat(6, 1fr);
     gap: 8px;
   }
-  .drawing-toolbar .size-row {
-    flex-wrap: wrap;
-  }
-  .drawing-toolbar .size-row input[type="range"] {
+  .drawing-toolbar .stroke-control {
+    grid-template-columns: 36px minmax(0, 1fr) 36px;
     max-width: 100%;
-    flex: 1 1 100%;
   }
   .drawing-toolbar .action-row {
     margin-top: 2px;
