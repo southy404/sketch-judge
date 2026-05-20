@@ -1,4 +1,4 @@
-import { hexToRgba } from "./canvasMath";
+import { hexToRgba } from "./canvasMath.js";
 
 export type Bbox = { x: number; y: number; width: number; height: number };
 

@@ -1,4 +1,4 @@
-import type { AiGenerateOptions, AiMessage, AiProvider } from "./types";
+import type { AiGenerateOptions, AiMessage, AiProvider } from "./types.js";
 
 type OllamaProviderConfig = {
   baseUrl: string;

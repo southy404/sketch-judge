@@ -4,7 +4,7 @@ import {
   type MotifCategory,
   type MotifDifficulty,
   type MotifSeed,
-} from "./motifs";
+} from "./motifs.js";
 
 const ALLOWED_DIFFICULTIES: MotifDifficulty[] = ["easy", "medium", "hard", "artist"];
 const ALLOWED_CATEGORIES: MotifCategory[] = [

@@ -1,26 +1,26 @@
-import { fallbackScoreFromCanvasAnalysis } from "../src/drawing/imageStats";
-import type { CanvasAnalysis } from "../src/drawing/imageStats";
-import { feedbackForScore } from "../src/scoring";
+import { fallbackScoreFromCanvasAnalysis } from "../src/drawing/imageStats.js";
+import type { CanvasAnalysis } from "../src/drawing/imageStats.js";
+import { feedbackForScore } from "../src/scoring.js";
 import {
   pickFallbackMotif,
   type MotifCategory,
   type MotifDifficulty,
   type MotifSeed,
-} from "./motifs";
-import { isValidMotif } from "./motifValidation";
+} from "./motifs.js";
+import { isValidMotif } from "./motifValidation.js";
 import {
   applyFinalScoreGuardsWithBreakdown,
   isProblemFeedback,
   sanitizeArtistFeedback,
   type DrawingQuality,
-} from "./judgeScoring";
+} from "./judgeScoring.js";
 import {
   AiConfigurationError,
   generateWithAi,
   getAiConfig,
   getPrimaryAiProvider,
   type AiGenerateResult,
-} from "./ai";
+} from "./ai/index.js";
 
 export type ApiResult = {
   status: number;
@@ -33,7 +33,10 @@ function asBodyRecord(body: unknown): BodyRecord {
   return body && typeof body === "object" ? (body as BodyRecord) : {};
 }
 
-function logAiRoute(route: "/api/motif" | "/api/judge", result: AiGenerateResult) {
+function logAiRoute(
+  route: "/api/motif" | "/api/judge",
+  result: AiGenerateResult
+) {
   if (process.env.NODE_ENV === "production") return;
   console.log("[ai]", {
     provider: result.provider,
@@ -91,24 +94,39 @@ function normalizeText(value: string): string {
   return value.toLowerCase().trim();
 }
 
-function detectedObjectDiffersFromTarget(target: string, detectedObject: string): boolean {
+function detectedObjectDiffersFromTarget(
+  target: string,
+  detectedObject: string
+): boolean {
   const targetNorm = normalizeText(target);
   const detectedNorm = normalizeText(detectedObject || "");
   if (!targetNorm || !detectedNorm) return false;
 
   const genericDetections = [
-    "object", "drawing", "sketch", "image", "picture",
-    "thing", "unknown", "unclear", "unverified",
+    "object",
+    "drawing",
+    "sketch",
+    "image",
+    "picture",
+    "thing",
+    "unknown",
+    "unclear",
+    "unverified",
   ];
   if (
     genericDetections.some(
-      (word) => detectedNorm === word || detectedNorm === `a ${word}` || detectedNorm === `an ${word}`
+      (word) =>
+        detectedNorm === word ||
+        detectedNorm === `a ${word}` ||
+        detectedNorm === `an ${word}`
     )
   ) {
     return false;
   }
 
-  return !detectedNorm.includes(targetNorm) && !targetNorm.includes(detectedNorm);
+  return (
+    !detectedNorm.includes(targetNorm) && !targetNorm.includes(detectedNorm)
+  );
 }
 
 function feedbackSaysTargetMissing(feedback: string): boolean {
@@ -123,9 +141,16 @@ function feedbackSaysTargetMissing(feedback: string): boolean {
   );
 }
 
-function motifAppearsWrong(target: string, detectedObject: string, feedback: string): boolean {
+function motifAppearsWrong(
+  target: string,
+  detectedObject: string,
+  feedback: string
+): boolean {
   const feedbackNorm = normalizeText(feedback || "");
-  const detectedDiffers = detectedObjectDiffersFromTarget(target, detectedObject);
+  const detectedDiffers = detectedObjectDiffersFromTarget(
+    target,
+    detectedObject
+  );
 
   const feedbackSaysWrong =
     feedbackNorm.includes("target was") ||
@@ -172,7 +197,12 @@ function capScoreForMismatch(
   target: string,
   feedback: string
 ): number {
-  const mismatch = isMotifMismatch(target, detectedObject, feedback, targetMatch);
+  const mismatch = isMotifMismatch(
+    target,
+    detectedObject,
+    feedback,
+    targetMatch
+  );
   if (!mismatch) return score;
 
   if (feedbackSaysTargetMissing(feedback)) return Math.min(score, 25);
@@ -200,13 +230,24 @@ function parseTargetMatch(value: unknown): boolean | undefined {
 }
 
 const POSITIVE_WORDS = [
-  "perfect", "great", "excellent", "lovely",
-  "amazing", "very good", "nice", "well done",
-  "clear", "recognizable",
+  "perfect",
+  "great",
+  "excellent",
+  "lovely",
+  "amazing",
+  "very good",
+  "nice",
+  "well done",
+  "clear",
+  "recognizable",
 ];
 const NEGATIVE_WORDS = [
-  "not recognizable", "hard to recognize", "unclear",
-  "does not look", "missing", "barely",
+  "not recognizable",
+  "hard to recognize",
+  "unclear",
+  "does not look",
+  "missing",
+  "barely",
 ];
 
 function reconcileScoreWithFeedback(
@@ -217,8 +258,20 @@ function reconcileScoreWithFeedback(
   target: string,
   artistMode: boolean
 ): number {
-  const mismatch = isMotifMismatch(target, detectedObject, feedback, targetMatch);
-  if (mismatch) return capScoreForMismatch(score, targetMatch, detectedObject, target, feedback);
+  const mismatch = isMotifMismatch(
+    target,
+    detectedObject,
+    feedback,
+    targetMatch
+  );
+  if (mismatch)
+    return capScoreForMismatch(
+      score,
+      targetMatch,
+      detectedObject,
+      target,
+      feedback
+    );
 
   const text = (feedback || "").toLowerCase();
 
@@ -242,7 +295,8 @@ type JudgeFields = {
 };
 
 function capScoreByMode(result: JudgeFields, artistMode: boolean): JudgeFields {
-  let { score, recognition, shape, details, creativity, effort, targetMatch } = result;
+  let { score, recognition, shape, details, creativity, effort, targetMatch } =
+    result;
 
   if (targetMatch === false && score > 30) score = 30;
 
@@ -252,7 +306,15 @@ function capScoreByMode(result: JudgeFields, artistMode: boolean): JudgeFields {
     if (recognition < 70 && score > 75) score = 75;
   }
 
-  return { score, recognition, shape, details, creativity, effort, targetMatch };
+  return {
+    score,
+    recognition,
+    shape,
+    details,
+    creativity,
+    effort,
+    targetMatch,
+  };
 }
 
 function isValidCanvasAnalysis(value: unknown): value is CanvasAnalysis {
@@ -265,7 +327,9 @@ function isValidCanvasAnalysis(value: unknown): value is CanvasAnalysis {
   );
 }
 
-function deriveDrawingQuality(analysis: CanvasAnalysis | null): DrawingQuality | undefined {
+function deriveDrawingQuality(
+  analysis: CanvasAnalysis | null
+): DrawingQuality | undefined {
   if (!analysis) return undefined;
   const a = analysis as CanvasAnalysis & Partial<DrawingQuality>;
   if (
@@ -291,9 +355,12 @@ function deriveDrawingQuality(analysis: CanvasAnalysis | null): DrawingQuality |
   }
 
   const inkCoverage = analysis.changedPixelRatio;
-  const bboxArea = analysis.bbox ? analysis.bbox.width * analysis.bbox.height : 0;
+  const bboxArea = analysis.bbox
+    ? analysis.bbox.width * analysis.bbox.height
+    : 0;
   const REF_SIDE = 1024;
-  const boundingBoxCoverage = bboxArea > 0 ? bboxArea / (REF_SIDE * REF_SIDE) : 0;
+  const boundingBoxCoverage =
+    bboxArea > 0 ? bboxArea / (REF_SIDE * REF_SIDE) : 0;
   return {
     inkCoverage,
     boundingBoxCoverage,
@@ -306,7 +373,10 @@ function deriveDrawingQuality(analysis: CanvasAnalysis | null): DrawingQuality |
   };
 }
 
-function casualMotifPrompt(recentMotifs: string[], recentCategories: string[]): string {
+function casualMotifPrompt(
+  recentMotifs: string[],
+  recentCategories: string[]
+): string {
   void recentCategories;
   return `You are choosing a drawing prompt for a fast party drawing game.
 
@@ -338,7 +408,10 @@ Return JSON only:
 }`;
 }
 
-function artistMotifPrompt(recentMotifs: string[], recentCategories: string[]): string {
+function artistMotifPrompt(
+  recentMotifs: string[],
+  recentCategories: string[]
+): string {
   return `You are choosing a drawing challenge for Artist Mode in an AI drawing game.
 
 Artist Mode is for adults, artists, and advanced players.
@@ -407,7 +480,12 @@ Return exactly:
 }`;
 }
 
-function seedToResponse(seed: MotifSeed, artistMode: boolean, source: string, model = "deterministic") {
+function seedToResponse(
+  seed: MotifSeed,
+  artistMode: boolean,
+  source: string,
+  model = "deterministic"
+) {
   return {
     name: seed.name,
     hint: seed.hint,
@@ -529,7 +607,10 @@ Feedback:
 export function createHealthResponse() {
   const aiConfig = getAiConfig();
   let aiProvider = aiConfig.primaryProvider;
-  let model = aiProvider === "openrouter" ? aiConfig.openRouter.model : aiConfig.ollama.model;
+  let model =
+    aiProvider === "openrouter"
+      ? aiConfig.openRouter.model
+      : aiConfig.ollama.model;
 
   try {
     const primaryProvider = getPrimaryAiProvider();
@@ -553,22 +634,27 @@ export async function createMotifResponse(body: unknown): Promise<ApiResult> {
   const requestBody = asBodyRecord(body);
   const artistMode = Boolean(requestBody.artistMode);
   const recentMotifs = Array.isArray(requestBody.recentMotifs)
-    ? (requestBody.recentMotifs as unknown[]).filter((m): m is string => typeof m === "string").slice(0, 24)
+    ? (requestBody.recentMotifs as unknown[])
+        .filter((m): m is string => typeof m === "string")
+        .slice(0, 24)
     : [];
   const recentCategories = Array.isArray(requestBody.recentCategories)
-    ? (requestBody.recentCategories as unknown[]).filter((c): c is string => typeof c === "string").slice(0, 8)
+    ? (requestBody.recentCategories as unknown[])
+        .filter((c): c is string => typeof c === "string")
+        .slice(0, 8)
     : [];
 
   try {
     const prompt = artistMode
       ? artistMotifPrompt(recentMotifs, recentCategories)
       : casualMotifPrompt(recentMotifs, recentCategories);
-    const ai = await generateWithAi(
-      [{ role: "user", content: prompt }],
-      { temperature: artistMode ? 0.9 : 0.65, responseFormat: "json" }
-    );
+    const ai = await generateWithAi([{ role: "user", content: prompt }], {
+      temperature: artistMode ? 0.9 : 0.65,
+      responseFormat: "json",
+    });
     logAiRoute("/api/motif", ai);
-    if (ai.provider === "fallback") throw new Error("No AI provider result for motif");
+    if (ai.provider === "fallback")
+      throw new Error("No AI provider result for motif");
 
     const parsed = extractJson(ai.text) as Record<string, unknown> | null;
 
@@ -576,12 +662,17 @@ export async function createMotifResponse(body: unknown): Promise<ApiResult> {
       const candidate = {
         name: typeof parsed.name === "string" ? parsed.name.trim() : "",
         hint: typeof parsed.hint === "string" ? parsed.hint.trim() : "",
-        difficulty: artistMode && parsed.difficulty == null ? "artist" : parsed.difficulty,
+        difficulty:
+          artistMode && parsed.difficulty == null
+            ? "artist"
+            : parsed.difficulty,
         category: parsed.category,
       };
 
       if (isValidMotif(candidate, { recentMotifs, artistMode })) {
-        const difficulty = (artistMode ? "artist" : candidate.difficulty) as MotifDifficulty;
+        const difficulty = (
+          artistMode ? "artist" : candidate.difficulty
+        ) as MotifDifficulty;
         const category = candidate.category as MotifCategory;
         return {
           status: 200,
@@ -603,7 +694,11 @@ export async function createMotifResponse(body: unknown): Promise<ApiResult> {
     console.warn("[motif] AI fallback:", error);
   }
 
-  const fallback = pickFallbackMotif({ recentMotifs, recentCategories, artistMode });
+  const fallback = pickFallbackMotif({
+    recentMotifs,
+    recentCategories,
+    artistMode,
+  });
   return {
     status: 200,
     body: seedToResponse(fallback, artistMode, "fallback"),
@@ -629,7 +724,11 @@ type ParsedJudge = {
 export async function createJudgeResponse(body: unknown): Promise<ApiResult> {
   const requestBody = asBodyRecord(body);
   const motif = String(requestBody.motif || "Object");
-  const actionCount = clampInt(requestBody.actionCount ?? requestBody.strokeCount ?? 0, 0, 500);
+  const actionCount = clampInt(
+    requestBody.actionCount ?? requestBody.strokeCount ?? 0,
+    0,
+    500
+  );
   const artistMode = Boolean(requestBody.artistMode);
   const imageBase64 = String(requestBody.imageBase64 || "");
   const rawAnalysis = requestBody.canvasAnalysis ?? requestBody.imageStats;
@@ -659,14 +758,18 @@ export async function createJudgeResponse(body: unknown): Promise<ApiResult> {
   try {
     if (!imageBase64) throw new Error("No image received");
 
-    const promptTemplate = artistMode ? ARTIST_JUDGE_PROMPT : CASUAL_JUDGE_PROMPT;
+    const promptTemplate = artistMode
+      ? ARTIST_JUDGE_PROMPT
+      : CASUAL_JUDGE_PROMPT;
     const prompt = promptTemplate.replace("__MOTIF__", motif);
-    const ai = await generateWithAi(
-      [{ role: "user", content: prompt }],
-      { temperature: 0.35, responseFormat: "json", images: [imageBase64] }
-    );
+    const ai = await generateWithAi([{ role: "user", content: prompt }], {
+      temperature: 0.35,
+      responseFormat: "json",
+      images: [imageBase64],
+    });
     logAiRoute("/api/judge", ai);
-    if (ai.provider === "fallback") throw new Error("No AI provider result for judge");
+    if (ai.provider === "fallback")
+      throw new Error("No AI provider result for judge");
 
     const parsed = extractJson(ai.text) as ParsedJudge | null;
     if (!parsed) throw new Error("No JSON from AI judge");
@@ -676,28 +779,57 @@ export async function createJudgeResponse(body: unknown): Promise<ApiResult> {
     let recognition = normalizeScore(parsed.recognition ?? parsed.score);
     let shape = normalizeRating(parsed.shape);
     let proportion = normalizeRating(parsed.proportion ?? parsed.details);
-    let details = parsed.details != null ? normalizeRating(parsed.details) : proportion;
+    let details =
+      parsed.details != null ? normalizeRating(parsed.details) : proportion;
     let color = parsed.color != null ? normalizeRating(parsed.color) : 1;
-    let composition = parsed.composition != null ? normalizeRating(parsed.composition) : 2;
+    let composition =
+      parsed.composition != null ? normalizeRating(parsed.composition) : 2;
     let creativity = normalizeRating(parsed.creativity);
     const effort = normalizeRating(parsed.effort);
-    let polish = parsed.polish != null ? normalizeRating(parsed.polish) : effort;
-    const detectedObject = typeof parsed.detectedObject === "string"
-      ? parsed.detectedObject.slice(0, 80)
-      : "";
+    let polish =
+      parsed.polish != null ? normalizeRating(parsed.polish) : effort;
+    const detectedObject =
+      typeof parsed.detectedObject === "string"
+        ? parsed.detectedObject.slice(0, 80)
+        : "";
     let targetMatch = parseTargetMatch(parsed.targetMatch);
-    const rawFeedback = typeof parsed.feedback === "string" ? parsed.feedback : "";
+    const rawFeedback =
+      typeof parsed.feedback === "string" ? parsed.feedback : "";
     let feedback = (rawFeedback || feedbackForScore(score)).slice(0, 140);
-    score = reconcileScoreWithFeedback(score, feedback, targetMatch, detectedObject, motif, artistMode);
-    score = capScoreForMismatch(score, targetMatch, detectedObject, motif, feedback);
+    score = reconcileScoreWithFeedback(
+      score,
+      feedback,
+      targetMatch,
+      detectedObject,
+      motif,
+      artistMode
+    );
+    score = capScoreForMismatch(
+      score,
+      targetMatch,
+      detectedObject,
+      motif,
+      feedback
+    );
 
-    const mismatch = isMotifMismatch(motif, detectedObject, feedback, targetMatch);
+    const mismatch = isMotifMismatch(
+      motif,
+      detectedObject,
+      feedback,
+      targetMatch
+    );
     if (mismatch) {
       targetMatch = false;
       if (!feedbackImpliesWrongTarget(feedback)) {
         feedback = `Nice drawing, but the target was ${motif.toLowerCase()}.`;
       }
-      score = capScoreForMismatch(score, targetMatch, detectedObject, motif, feedback);
+      score = capScoreForMismatch(
+        score,
+        targetMatch,
+        detectedObject,
+        motif,
+        feedback
+      );
       recognition = Math.min(recognition, 25);
       shape = Math.min(shape, 2);
       proportion = Math.min(proportion, 2);
@@ -711,7 +843,15 @@ export async function createJudgeResponse(body: unknown): Promise<ApiResult> {
     }
 
     const capped = capScoreByMode(
-      { score, recognition, shape, details: proportion, creativity, effort, targetMatch },
+      {
+        score,
+        recognition,
+        shape,
+        details: proportion,
+        creativity,
+        effort,
+        targetMatch,
+      },
       artistMode
     );
 
@@ -794,7 +934,8 @@ export async function createJudgeResponse(body: unknown): Promise<ApiResult> {
   const heuristic = fallbackScoreFromCanvasAnalysis(analysis, actionCount);
   const fallbackCap = artistMode ? 60 : 70;
   const preGuardScore = Math.min(heuristic.score, fallbackCap);
-  const fallbackFeedback = "Fallback score used. Motif match could not be fully verified.";
+  const fallbackFeedback =
+    "Fallback score used. Motif match could not be fully verified.";
   const drawingQuality = deriveDrawingQuality(analysis);
 
   const breakdown = applyFinalScoreGuardsWithBreakdown({

@@ -1,4 +1,4 @@
-import type { AiProviderName } from "./types";
+import type { AiProviderName } from "./types.js";
 
 export type AiConfig = {
   primaryProvider: AiProviderName;

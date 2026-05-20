@@ -1,7 +1,7 @@
-import { getAiConfig, type AiConfig } from "./config";
-import { createOllamaProvider } from "./ollamaProvider";
-import { createOpenRouterProvider } from "./openRouterProvider";
-import type { AiProvider, AiProviderName } from "./types";
+import { getAiConfig, type AiConfig } from "./config.js";
+import { createOllamaProvider } from "./ollamaProvider.js";
+import { createOpenRouterProvider } from "./openRouterProvider.js";
+import type { AiProvider, AiProviderName } from "./types.js";
 
 export class AiConfigurationError extends Error {
   provider: AiProviderName;
