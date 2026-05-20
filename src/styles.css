@@ -24,14 +24,31 @@
 }
 
 html,
-body {
+body,
+#root {
   margin: 0;
   padding: 0;
+  min-height: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+html,
+body {
   height: 100%;
 }
 
 body {
   overflow-x: hidden;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  /* iOS Safari: prevent double-tap zoom on UI controls; the canvas overrides
+     this to `none` so drawing still works without scrolling the page. */
+  touch-action: manipulation;
+}
+
+canvas {
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 #root {
@@ -330,6 +347,17 @@ input {
 }
 
 /* ============ settings ============ */
+/* The settings paper grows with the player count. Since .app has
+   overflow: hidden, we let the settings screen scroll internally so the
+   bottom of the paper + the primary button stay reachable on phones
+   when 4-5 players are configured. */
+.settings {
+  max-height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
 .settings .paper-settings {
   display: grid;
   gap: 16px;
@@ -477,13 +505,17 @@ input {
   padding: 4px 0;
 }
 
-/* setup — same motif.svg paper, stretched to fit the form content */
+/* setup — same motif.svg paper, stretched to fit the form content. The paper
+   grows from its content (no fixed height); the bg image stretches via
+   inset:0 + object-fit:fill to follow whatever height the content needs. */
 .setup-note {
   position: relative;
   width: min(94vw, 420px);
-  min-height: clamp(540px, 64dvh, 610px);
+  min-height: 420px;
+  height: auto;
   margin: -18px auto 0;
-  padding: 182px 38px 38px;
+  padding: 182px 38px 40px;
+  overflow: visible;
 }
 
 .setup-note-bg {
@@ -1449,6 +1481,16 @@ input {
   background: #fffef9;
 }
 
+.summary-thumb:disabled {
+  cursor: default;
+}
+
+.summary-thumb:not(:disabled):hover,
+.summary-thumb:not(:disabled):focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 0 rgba(17, 18, 23, 0.08);
+}
+
 .summary-thumb img {
   width: 100%;
   height: 100%;
@@ -1535,6 +1577,53 @@ input {
 
 .summary-empty p {
   margin: 0;
+}
+
+.summary-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  padding: calc(24px + env(safe-area-inset-top)) 18px calc(24px + env(safe-area-inset-bottom));
+  background: rgba(17, 18, 23, 0.58);
+}
+
+.summary-lightbox-card {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: min(92vw, 860px);
+  max-height: 84dvh;
+  padding: 14px;
+  border: 2px solid var(--ink);
+  border-radius: 18px;
+  background: #fffdf5;
+  box-shadow: 0 24px 60px rgba(17, 18, 23, 0.24);
+}
+
+.summary-lightbox-card img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  max-height: calc(84dvh - 28px);
+  object-fit: contain;
+  border-radius: 12px;
+}
+
+.summary-lightbox-close {
+  position: absolute;
+  top: -15px;
+  right: -15px;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  background: #fffdf5;
+  color: var(--ink);
+  box-shadow: 0 5px 0 rgba(17, 18, 23, 0.14);
 }
 
 /* ============ toast ============ */
@@ -1960,8 +2049,181 @@ input {
   }
 }
 
-/* ============ short-height adaptations ============ */
-@media (max-height: 720px) {
+/* ============ tablet (iPad portrait and similar) ============ */
+@media (min-width: 768px) {
+  .app {
+    max-width: 760px;
+  }
+
+  .screen {
+    padding: calc(28px + env(safe-area-inset-top)) 36px
+      calc(28px + env(safe-area-inset-bottom));
+    gap: 18px;
+  }
+
+  /* Drawing screen — canvas on the left, toolbar panel on the right.
+     The internal canvas buffer stays 768x768 (square), so we keep the
+     stack aspect-ratio 1/1 and let it grow as the column allows. */
+  .drawing {
+    grid-template-columns: minmax(0, 1fr) 260px;
+    grid-template-rows: auto auto 1fr;
+    grid-template-areas:
+      "top    top"
+      "title  title"
+      "stage  toolbar";
+    column-gap: 28px;
+    row-gap: 12px;
+  }
+  .drawing > .screen-top { grid-area: top; }
+  .drawing > .draw-title { grid-area: title; }
+  .drawing > .drawing-stage {
+    grid-area: stage;
+    min-height: 0;
+  }
+  .drawing > .drawing-toolbar {
+    grid-area: toolbar;
+    align-self: start;
+    grid-template-rows: auto auto auto auto;
+    gap: 14px;
+    position: sticky;
+    top: 20px;
+    max-height: calc(100dvh - 140px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* iOS Safari smooth scroll inside the panel. */
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .canvas-stack {
+    aspect-ratio: 1 / 1;
+    max-height: min(74dvh, 720px);
+    max-width: min(100%, 720px);
+    margin: 0 auto;
+  }
+
+  .drawing-toolbar .tool-row {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    justify-content: flex-start;
+  }
+  .drawing-toolbar .palette-grid {
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+  }
+  .drawing-toolbar .size-row {
+    flex-wrap: wrap;
+  }
+  .drawing-toolbar .size-row input[type="range"] {
+    max-width: 100%;
+    flex: 1 1 100%;
+  }
+  .drawing-toolbar .action-row {
+    margin-top: 2px;
+  }
+
+  /* Non-drawing screens: keep their content cards centered and modest. */
+  .setup-note {
+    width: min(86vw, 460px);
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .welcome-art {
+    margin: 36px auto;
+  }
+  .home-sketchy {
+    width: clamp(260px, 56vw, 420px);
+  }
+  .motif-note {
+    width: min(70vw, 380px);
+  }
+  .score-banner {
+    width: min(70vw, 420px);
+  }
+  .finished-stage {
+    max-width: 540px;
+    margin: 0 auto;
+  }
+  .result-scroll {
+    width: min(86vw, 560px);
+    max-width: 560px;
+    margin: 0 auto;
+  }
+  .primary {
+    max-width: 420px;
+  }
+}
+
+/* ============ desktop / iPad landscape ============ */
+@media (min-width: 1024px) {
+  .app {
+    max-width: 1180px;
+  }
+
+  .screen {
+    padding: calc(32px + env(safe-area-inset-top)) 32px
+      calc(32px + env(safe-area-inset-bottom));
+  }
+
+  .drawing {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    column-gap: 32px;
+  }
+
+  .canvas-stack {
+    max-height: min(76dvh, 860px);
+    max-width: min(76dvh, 860px);
+  }
+
+  .drawing-toolbar .palette-grid {
+    grid-template-columns: repeat(7, 1fr);
+  }
+
+  .setup-note {
+    width: min(86vw, 520px);
+  }
+  .result-scroll {
+    width: min(72vw, 640px);
+    max-width: 640px;
+  }
+  .finished-stage {
+    max-width: 640px;
+  }
+}
+
+/* ============ large desktop ============ */
+@media (min-width: 1280px) {
+  .app {
+    max-width: 1320px;
+  }
+
+  .drawing {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    column-gap: 40px;
+  }
+
+  .canvas-stack {
+    max-height: min(80dvh, 940px);
+    max-width: min(80dvh, 940px);
+  }
+
+  .finished-stage {
+    max-width: 680px;
+  }
+  .result-scroll {
+    width: min(62vw, 680px);
+    max-width: 680px;
+  }
+}
+
+/* ============ very large desktop cap ============ */
+@media (min-width: 1536px) {
+  .app {
+    max-width: 1440px;
+  }
+}
+
+/* ============ short-height adaptations (phones in landscape, narrow + short) ============ */
+@media (max-height: 720px) and (max-width: 760px) {
   .screen {
     gap: 10px;
     padding-top: calc(12px + env(safe-area-inset-top));
@@ -1989,7 +2251,7 @@ input {
   .setup-note {
     width: min(90vw, 350px);
     min-height: 0;
-    padding: 142px 28px 28px;
+    padding: 92px 28px 32px;
   }
   .setup-note-content {
     gap: 12px;

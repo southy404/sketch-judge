@@ -4,8 +4,8 @@ import { useCanvasDrawing } from "./useCanvasDrawing";
 import { analyzeCanvasContent, emptyAnalysis } from "./imageStats";
 import type { CanvasAnalysis } from "./imageStats";
 
-export const CANVAS_WIDTH = 768;
-export const CANVAS_HEIGHT = 768;
+export const CANVAS_WIDTH = 1024;
+export const CANVAS_HEIGHT = 1024;
 export const BASE_BG = "#fffef9";
 
 type Props = {

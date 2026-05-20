@@ -119,7 +119,7 @@ It prefers harder motifs and judges detail, proportion, creativity, and effort m
 | Build Tool      | Vite                   |
 | Canvas          | HTML Canvas            |
 | API Server      | Node.js + Express      |
-| AI Runtime      | Ollama                 |
+| AI Runtime      | Ollama / OpenRouter    |
 | Model           | Gemma 4 / `gemma4:e4b` |
 | Dev Runner      | tsx                    |
 | Package Manager | pnpm                   |
@@ -207,15 +207,49 @@ Preview the production build locally.
 
 ---
 
+## AI Providers
+
+Sketch Judge defaults to local Ollama and can use OpenRouter from the backend when configured. API keys stay server-side in `.env`; the frontend never receives `OPENROUTER_API_KEY`.
+
+Default local mode:
+
+```bash
+AI_PROVIDER=ollama
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+OLLAMA_MODEL=gemma4:e4b
+```
+
+OpenRouter mode:
+
+```bash
+AI_PROVIDER=openrouter
+AI_FALLBACK_PROVIDER=ollama
+OPENROUTER_API_KEY=your-openrouter-key
+OPENROUTER_MODEL=google/gemma-4-e4b
+```
+
+If OpenRouter is selected without a key, or an OpenRouter request fails while `AI_FALLBACK_PROVIDER=ollama`, the API falls back to Ollama. If Ollama is unavailable too, the existing deterministic motif and score fallback logic is used.
+
+---
+
 ## Environment Variables
 
 Create a local `.env` from `.env.example`.
 
 ```txt
+AI_PROVIDER=ollama
+AI_FALLBACK_PROVIDER=ollama
+
 OLLAMA_BASE_URL=http://127.0.0.1:11434
 OLLAMA_MODEL=gemma4:e4b
-PORT=3001
-JUDGE_DEBUG=true
+
+OPENROUTER_API_KEY=
+OPENROUTER_MODEL=google/gemma-4-e4b
+OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+OPENROUTER_SITE_URL=http://localhost:5173
+OPENROUTER_APP_NAME=Sketch Judge
+
+PORT=8789
 ```
 
 ---
@@ -232,7 +266,8 @@ This is the practical structure, reduced to the important parts:
 │   └── mockup.png
 │
 ├── server/
-│   ├── index.ts              # Express API, Ollama calls, motif + judge routes
+│   ├── ai/                   # Provider config, OpenRouter, Ollama abstraction
+│   ├── index.ts              # Express API, motif + judge routes
 │   ├── motifs.ts             # Casual/artist motif pools and fallback picking
 │   ├── motifValidation.ts    # Motif safety, boring/recent checks
 │   └── judgeScoring.ts       # Score guards, artist mode caps, self-tests

@@ -21,14 +21,23 @@ import {
   sanitizeArtistFeedback,
   type DrawingQuality,
 } from "./judgeScoring";
+import { generateWithAi, getAiConfig, getPrimaryAiProvider, type AiGenerateResult } from "./ai";
 
 const app = express();
 const port = Number(process.env.PORT || 8789);
-const OLLAMA_URL = (process.env.OLLAMA_URL || "http://127.0.0.1:11434").replace(/\/$/, "");
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "gemma4:e4b";
 
 app.use(cors());
 app.use(express.json({ limit: "20mb" }));
+
+function logAiRoute(route: "/api/motif" | "/api/judge", result: AiGenerateResult) {
+  if (process.env.NODE_ENV === "production") return;
+  console.log("[ai]", {
+    provider: result.provider,
+    model: result.model,
+    usedFallback: result.usedFallback,
+    route,
+  });
+}
 
 function extractJson(text: string): unknown {
   const match = text.match(/\{[\s\S]*\}/);
@@ -270,7 +279,11 @@ function deriveDrawingQuality(analysis: CanvasAnalysis | null): DrawingQuality |
   // Legacy clients send the smaller analysis shape. Derive what we can.
   const inkCoverage = analysis.changedPixelRatio;
   const bboxArea = analysis.bbox ? analysis.bbox.width * analysis.bbox.height : 0;
-  const boundingBoxCoverage = bboxArea > 0 ? bboxArea / (768 * 768) : 0;
+  // Reference side matches CANVAS_REF_SIDE in src/drawing/imageStats.ts. This
+  // legacy derivation only runs for old clients that don't send the extended
+  // analysis; it is a coarse fallback.
+  const REF_SIDE = 1024;
+  const boundingBoxCoverage = bboxArea > 0 ? bboxArea / (REF_SIDE * REF_SIDE) : 0;
   return {
     inkCoverage,
     boundingBoxCoverage,
@@ -281,35 +294,6 @@ function deriveDrawingQuality(analysis: CanvasAnalysis | null): DrawingQuality |
     isSparseDrawing: inkCoverage < 0.015,
     edgeComplexity: 0,
   };
-}
-
-type OllamaResponse = { message?: { content?: string }; response?: string };
-
-async function ollamaGenerate(prompt: string, images?: string[], temperature = 0.35): Promise<string> {
-  const response = await fetch(`${OLLAMA_URL}/api/chat`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      model: OLLAMA_MODEL,
-      stream: false,
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-          ...(images?.length ? { images } : {}),
-        },
-      ],
-      options: { temperature },
-    }),
-  });
-
-  if (!response.ok) {
-    const body = await response.text().catch(() => "");
-    throw new Error(`Ollama failed ${response.status}: ${body}`);
-  }
-
-  const data = (await response.json()) as OllamaResponse;
-  return String(data?.message?.content || data?.response || "");
 }
 
 function casualMotifPrompt(recentMotifs: string[], recentCategories: string[]): string {
@@ -413,7 +397,7 @@ Return exactly:
 }`;
 }
 
-function seedToResponse(seed: MotifSeed, artistMode: boolean, source: string) {
+function seedToResponse(seed: MotifSeed, artistMode: boolean, source: string, model = "deterministic") {
   return {
     name: seed.name,
     hint: seed.hint,
@@ -421,12 +405,21 @@ function seedToResponse(seed: MotifSeed, artistMode: boolean, source: string) {
     category: seed.category,
     artistMode,
     source,
-    model: OLLAMA_MODEL,
+    model,
   };
 }
 
 app.get("/api/health", (_req, res) => {
-  res.json({ ok: true, ollamaUrl: OLLAMA_URL, model: OLLAMA_MODEL });
+  const aiConfig = getAiConfig();
+  const primaryProvider = getPrimaryAiProvider();
+  res.json({
+    ok: true,
+    aiProvider: primaryProvider.name,
+    fallbackProvider: aiConfig.fallbackProvider,
+    openRouterConfigured: aiConfig.openRouter.configured,
+    ollamaBaseUrl: aiConfig.ollama.baseUrl,
+    model: primaryProvider.model,
+  });
 });
 
 app.post("/api/motif", async (req, res) => {
@@ -442,7 +435,14 @@ app.post("/api/motif", async (req, res) => {
     const prompt = artistMode
       ? artistMotifPrompt(recentMotifs, recentCategories)
       : casualMotifPrompt(recentMotifs, recentCategories);
-    const text = await ollamaGenerate(prompt, undefined, artistMode ? 0.9 : 0.65);
+    const ai = await generateWithAi(
+      [{ role: "user", content: prompt }],
+      { temperature: artistMode ? 0.9 : 0.65, responseFormat: "json" }
+    );
+    logAiRoute("/api/motif", ai);
+    if (ai.provider === "fallback") throw new Error("No AI provider result for motif");
+
+    const text = ai.text;
     const parsed = extractJson(text) as Record<string, unknown> | null;
 
     if (parsed) {
@@ -465,14 +465,14 @@ app.post("/api/motif", async (req, res) => {
           difficulty,
           category,
           artistMode,
-          source: "ollama",
-          model: OLLAMA_MODEL,
+          source: ai.provider,
+          model: ai.model,
         });
         return;
       }
     }
   } catch (error) {
-    console.warn("[motif] Ollama fallback:", error);
+    console.warn("[motif] AI fallback:", error);
   }
 
   const fallback = pickFallbackMotif({ recentMotifs, recentCategories, artistMode });
@@ -591,7 +591,6 @@ app.post("/api/judge", async (req, res) => {
   const actionCount = clampInt(req.body?.actionCount ?? req.body?.strokeCount ?? 0, 0, 500);
   const artistMode = Boolean(req.body?.artistMode);
   const imageBase64 = String(req.body?.imageBase64 || "");
-  const imageForOllama = imageBase64.replace(/^data:image\/\w+;base64,/, "");
   const rawAnalysis = req.body?.canvasAnalysis ?? req.body?.imageStats;
   const analysis = isValidCanvasAnalysis(rawAnalysis) ? rawAnalysis : null;
 
@@ -610,17 +609,24 @@ app.post("/api/judge", async (req, res) => {
       source: "local",
       judgeMode: "blank",
       artistMode,
-      model: OLLAMA_MODEL,
+      model: "local",
     });
     return;
   }
 
   try {
-    if (!imageForOllama) throw new Error("No image received");
+    if (!imageBase64) throw new Error("No image received");
 
     const promptTemplate = artistMode ? ARTIST_JUDGE_PROMPT : CASUAL_JUDGE_PROMPT;
     const prompt = promptTemplate.replace("__MOTIF__", motif);
-    const text = await ollamaGenerate(prompt, [imageForOllama]);
+    const ai = await generateWithAi(
+      [{ role: "user", content: prompt }],
+      { temperature: 0.35, responseFormat: "json", images: [imageBase64] }
+    );
+    logAiRoute("/api/judge", ai);
+    if (ai.provider === "fallback") throw new Error("No AI provider result for judge");
+
+    const text = ai.text;
 
     const parsed = extractJson(text) as
       | {
@@ -639,7 +645,7 @@ app.post("/api/judge", async (req, res) => {
           targetMatch?: unknown;
         }
       | null;
-    if (!parsed) throw new Error("No JSON from Ollama judge");
+    if (!parsed) throw new Error("No JSON from AI judge");
 
     const rawScore = normalizeScore(parsed.score);
     let score = rawScore;
@@ -750,14 +756,14 @@ app.post("/api/judge", async (req, res) => {
       feedback,
       detectedObject,
       targetMatch: capped.targetMatch,
-      source: "ollama",
-      model: OLLAMA_MODEL,
+      source: ai.provider,
+      model: ai.model,
       judgeMode: "vision",
       artistMode,
     });
     return;
   } catch (error) {
-    console.warn("[judge] Ollama vision fallback:", error);
+    console.warn("[judge] AI vision fallback:", error);
   }
 
   // Honest fallback: based on canvas analysis + action count. Mode-aware cap
@@ -825,7 +831,7 @@ app.post("/api/judge", async (req, res) => {
     detectedObject: "unverified",
     targetMatch: undefined,
     source: "fallback",
-    model: OLLAMA_MODEL,
+    model: "deterministic",
     judgeMode: "fallback",
     artistMode,
   });
@@ -843,6 +849,8 @@ if (selfTest.pass) {
 }
 
 app.listen(port, "0.0.0.0", () => {
+  const aiConfig = getAiConfig();
   console.log(`[sketch-judge-api] http://127.0.0.1:${port}`);
-  console.log(`[sketch-judge-api] Ollama: ${OLLAMA_URL} | model: ${OLLAMA_MODEL}`);
+  console.log(`[sketch-judge-api] AI provider: ${aiConfig.primaryProvider} | fallback: ${aiConfig.fallbackProvider}`);
+  console.log(`[sketch-judge-api] Ollama: ${aiConfig.ollama.baseUrl} | model: ${aiConfig.ollama.model}`);
 });

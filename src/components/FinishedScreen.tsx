@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Share2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Share2, X } from "lucide-react";
 import type { DrawingSummary, Player } from "../types";
 import { getFinalTitle, getWinners } from "../gameLogic";
 import { Leaderboard } from "./Leaderboard";
@@ -123,6 +123,19 @@ async function shareSummaryImage(item: DrawingSummary) {
 }
 
 function SummaryList({ summaries }: { summaries: DrawingSummary[] }) {
+  const [previewItem, setPreviewItem] = useState<DrawingSummary | null>(null);
+
+  useEffect(() => {
+    if (!previewItem) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setPreviewItem(null);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [previewItem]);
+
   if (summaries.length === 0) {
     return (
       <div className="summary-empty paper">
@@ -132,39 +145,66 @@ function SummaryList({ summaries }: { summaries: DrawingSummary[] }) {
   }
 
   return (
-    <div className="summary-scroll">
-      <ul className="summary-list">
-        {summaries.map((item) => (
-          <li key={item.id} className="summary-card paper">
-            <div className="summary-thumb">
-              {item.imageBase64 ? (
-                <img src={item.imageBase64} alt={`${item.playerName} drawing of ${item.motif}`} />
-              ) : (
-                <span>no drawing</span>
-              )}
-            </div>
-            <div className="summary-meta">
-              <span className="summary-player">
-                <span className="summary-dot" style={{ background: item.avatarColor }} aria-hidden />
-                {item.playerName}
-              </span>
-              <span className="summary-motif">round {item.round} - {item.motif}</span>
-            </div>
-            <div className="summary-actions">
-              <span className="summary-score">{item.score}</span>
+    <>
+      <div className="summary-scroll">
+        <ul className="summary-list">
+          {summaries.map((item) => (
+            <li key={item.id} className="summary-card paper">
               <button
                 type="button"
-                className="summary-share"
-                onClick={() => void shareSummaryImage(item)}
+                className="summary-thumb"
+                onClick={() => setPreviewItem(item)}
                 disabled={!item.imageBase64}
-                aria-label={`share ${item.playerName}'s ${item.motif} drawing`}
+                aria-label={`open ${item.playerName}'s ${item.motif} drawing`}
               >
-                <Share2 size={17} />
+                {item.imageBase64 ? (
+                  <img src={item.imageBase64} alt={`${item.playerName} drawing of ${item.motif}`} />
+                ) : (
+                  <span>no drawing</span>
+                )}
               </button>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
+              <div className="summary-meta">
+                <span className="summary-player">
+                  <span className="summary-dot" style={{ background: item.avatarColor }} aria-hidden />
+                  {item.playerName}
+                </span>
+                <span className="summary-motif">round {item.round} - {item.motif}</span>
+              </div>
+              <div className="summary-actions">
+                <span className="summary-score">{item.score}</span>
+                <button
+                  type="button"
+                  className="summary-share"
+                  onClick={() => void shareSummaryImage(item)}
+                  disabled={!item.imageBase64}
+                  aria-label={`share ${item.playerName}'s ${item.motif} drawing`}
+                >
+                  <Share2 size={17} />
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {previewItem?.imageBase64 && (
+        <div className="summary-lightbox" role="dialog" aria-modal="true" onClick={() => setPreviewItem(null)}>
+          <div className="summary-lightbox-card" onClick={(event) => event.stopPropagation()}>
+            <button
+              type="button"
+              className="summary-lightbox-close"
+              onClick={() => setPreviewItem(null)}
+              aria-label="close drawing preview"
+            >
+              <X size={22} />
+            </button>
+            <img
+              src={previewItem.imageBase64}
+              alt={`${previewItem.playerName} drawing of ${previewItem.motif}`}
+            />
+          </div>
+        </div>
+      )}
+    </>
   );
 }
