@@ -28,6 +28,15 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     });
   }
 
-  const result = await createMotifResponse(req.body);
-  return res.status(result.status).json(result.body);
+  try {
+    const result = await createMotifResponse(req.body);
+    return res.status(result.status).json(result.body);
+  } catch (error) {
+    console.error("[api/motif] unhandled error", error);
+
+    return res.status(500).json({
+      ok: false,
+      error: "Motif generation failed.",
+    });
+  }
 }

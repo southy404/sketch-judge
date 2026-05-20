@@ -1,13 +1,13 @@
 import express from "express";
 import cors from "cors";
-import { loadLocalEnv } from "./loadLocalEnv";
-import { runJudgeGuardSelfTest } from "./judgeScoring";
+import { loadLocalEnv } from "./loadLocalEnv.js";
+import { runJudgeGuardSelfTest } from "./judgeScoring.js";
 import {
   createHealthResponse,
   createJudgeResponse,
   createMotifResponse,
-} from "./apiHandlers";
-import { getAiConfig } from "./ai";
+} from "./apiHandlers.js";
+import { getAiConfig } from "./ai/index.js";
 
 loadLocalEnv();
 
@@ -41,6 +41,10 @@ if (selfTest.pass) {
 app.listen(port, "0.0.0.0", () => {
   const aiConfig = getAiConfig();
   console.log(`[sketch-judge-api] http://127.0.0.1:${port}`);
-  console.log(`[sketch-judge-api] AI provider: ${aiConfig.primaryProvider} | fallback: ${aiConfig.fallbackProvider}`);
-  console.log(`[sketch-judge-api] Ollama: ${aiConfig.ollama.baseUrl} | model: ${aiConfig.ollama.model}`);
+  console.log(
+    `[sketch-judge-api] AI provider: ${aiConfig.primaryProvider} | fallback: ${aiConfig.fallbackProvider}`
+  );
+  console.log(
+    `[sketch-judge-api] Ollama: ${aiConfig.ollama.baseUrl} | model: ${aiConfig.ollama.model}`
+  );
 });
